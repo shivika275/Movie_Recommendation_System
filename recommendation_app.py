@@ -93,7 +93,7 @@ if __name__=='__main__':
     
     st.subheader("Possible rating values")
     st.write("Ratings can take up ordinal values from 0.5 to 5.0 as evident in the graph.")
-    rating_counts = df_user['ratings'].value_counts().sort_index()
+    rating_counts = df_users['rating'].value_counts().sort_index()
 
     # Plot the bar chart
     fig, ax = plt.subplots()
