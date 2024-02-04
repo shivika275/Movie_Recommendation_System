@@ -12,7 +12,54 @@ from surprise import SVDpp
 from surprise import accuracy
 from surprise.dataset import DatasetAutoFolds
 from surprise.model_selection import cross_validate, GridSearchCV
-from helper import calc_metrics
+# from helper import calc_metrics
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+def calc_metrics(user_id, preds, unique_movie_ids, df_users):
+  
+      predictions = preds #[svdpp.predict(user_id, movie_id) for movie_id in unique_movie_ids]
+      filtered_ = [prediction for prediction in predictions if prediction.est >= 3.5]
+      recommended_items = set(prediction.iid for prediction in predictions)
+
+      actual_ratings = []
+      est_ratings = []
+      recommended_indata = []
+      preds_rmse = []
+      
+
+      for preds in filtered_:
+        
+        rating = df_users[(df_users['userId'] == preds.uid) & (df_users['movieId'] == preds.iid)]['rating'].values
+
+        if len(rating) > 0:
+          recommended_indata.append(preds.iid)
+          actual_rating = rating[0]
+          actual_ratings.append(actual_rating)
+          est_ratings.append(preds.est)
+          preds_rmse.append(preds)
+
+      recommended_indata_set = set(recommended_indata)
+      relevant_items = set(df_users[df_users['userId'] == user_id][df_users['rating'] >= 3.5]['movieId'])
+      relevant_recommendation = recommended_indata_set.intersection(relevant_items) #relevant_items.intersection(recommended_items)
+      
+      if len(relevant_items) == 0:
+        recall = 0
+      else:
+        recall = len(relevant_recommendation) / len(relevant_items)
+      
+      if len(recommended_indata) == 0:
+        precision = 0
+      else:
+        precision = len(relevant_recommendation) / len(recommended_indata)
+      
+      if len(recommended_indata) == 0:
+        rmse, mae = -1.0, -1.0
+        print("No relevant recommendations have been made")
+      else:
+        rmse = np.sqrt(mean_squared_error(est_ratings, actual_ratings))
+        mae = mean_absolute_error(est_ratings, actual_ratings)
+      
+      return precision, recall, rmse, mae
 
 def get_recommendation(user_id, algo, unique_movie_ids, top_k = 5):
   """
@@ -116,7 +163,7 @@ stratify=merged_df['userId'], random_state=42)
                             Dataset.load_from_df(test_df[['userId', 'movieId', 'rating']], reader)
 
     train_data, test_data = train_data.build_full_trainset(), test_data.build_full_trainset()
-    train_data=Dataset.load_from_df(train_df[['userId', 'movieId', 'rating']], reader)
+    train_data=Dataset.load_from_Fdf(train_df[['userId', 'movieId', 'rating']], reader)
 
     # grid search for the best parameter for the SVD++
     if search:
