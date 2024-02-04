@@ -33,30 +33,33 @@ if __name__=='__main__':
 
     # Data Overview: Show a brief overview of the initial raw data
     
-    df_movies = pd.read_csv("data/movies.csv")
-    df_users = pd.read_csv("data/ratings.csv")
+    df_movies = pd.read_csv("./data/movies.csv")
+    df_users = pd.read_csv("./data/ratings.csv")
     
     # Data clean-up
-    st.title("Data Overview")
+    st.header("Data Overview")
+    st.write("In this section, we briefly go over how the data looks.")
     st.subheader("Movie data")
     st.dataframe(df_movies.head())
     st.subheader("User data")
     st.dataframe(df_users.head())
-    # st.subheader("Average movie rating")
+    
+    st.subheader("Possible rating values")
+    st.write("Ratings can take up ordinal values from 0.5 to 5.0 as evident in the graph.")
+    rating_counts = df_user['rating'].value_counts().sort_index()
 
-    # avg_ratings = df_users.groupby('movieId')['rating'].mean().reset_index()
-    # st.write('Movie ID vs. Average Rating (Matplotlib)')
-    # fig, ax = plt.subplots()
-    # sns.barplot(x='movieId', y='rating', data=avg_ratings, palette='viridis')
-    # #ax.bar(avg_ratings['movieId'], avg_ratings['rating'], palette='viridis')
-    # ax.set_xlabel('Movie ID')
-    # ax.set_ylabel('Average Rating')
-    # st.pyplot(fig)
+    # Plot the bar chart
+    fig, ax = plt.subplots()
+    ax.bar(rating_counts.index, rating_counts.values, color='skyblue')
+    ax.set_xlabel('Rating')
+    ax.set_ylabel('Count')
+    ax.set_title('Distribution of Ratings')
 
-    st.write('Rating values')
+    # Display the plot in Streamlit
+    st.pyplot(fig)
 
     # Merged data-frame
-    st.title("Feature Enhancement")
+    st.header("Feature Enhancement")
     st.write(" Both the movie.csv and user.csv files were clean - no duplicates or N/A data. For our purpose, "+
     " data in user.csv is enough to train the recommendation model since we are implementing a collaborative-recommender system "+
     "that depends more on the user's interaction with the item. However, for the readibility aspect, the titles column has been added.")
@@ -81,7 +84,7 @@ stratify=merged_df['userId'], random_state=42)
     # Use st.code to display the code
     st.code(code, language='python')
 
-    st.title("Recommendation Abstract")
+    st.header("Recommendation Abstract")
 
     # st.write("The recommender used is SVD++. This is a collaborative ")
     # st.write("SVD++ model from the surprise-scikit library has been chosen for the recommendation system. "+
@@ -144,7 +147,7 @@ stratify=merged_df['userId'], random_state=42)
         with open('svdpp_model.pkl', 'rb') as file:
             algo = pickle.load(file)
 
-    st.title("Recommendation Demo")
+    st.header("Recommendation Demo")
     st.write("Slide to the user_id you want to view!")
     # Recommendation Demo
     selected_user_id = st.slider("Select User ID", min_value=df_users['userId'].min(), max_value=df_users['userId'].max())
