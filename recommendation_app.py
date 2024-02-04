@@ -116,7 +116,7 @@ stratify=merged_df['userId'], random_state=42)
                             Dataset.load_from_df(test_df[['userId', 'movieId', 'rating']], reader)
 
     train_data, test_data = train_data.build_full_trainset(), test_data.build_full_trainset()
-    train_data=Dataset.load_from_!df(train_df[['userId', 'movieId', 'rating']], reader)
+    train_data=Dataset.load_from_df(train_df[['userId', 'movieId', 'rating']], reader)
 
     # grid search for the best parameter for the SVD++
     if search:
