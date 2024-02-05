@@ -29,7 +29,7 @@ def calc_metrics(user_id, preds, unique_movie_ids, df_users):
               ests.append(pred.est)
 
       filtered_ = [prediction for prediction in predictions if prediction.est >= 3.5]
-      recommended_items = set(prediction.iid for prediction in predictions)
+      # recommended_items = set(prediction.iid for prediction in predictions)
 
       actual_ratings = []
       est_ratings = []
@@ -215,15 +215,19 @@ stratify=merged_df['userId'], random_state=42)
         algo = SVDpp(**params)
 
         cross_validate(algo, train_data, measures=['RMSE', 'MAE'], cv=5, verbose=True)
-        with open('svdpp_model_1.pkl', 'wb') as file:
+        with open('svdpp_model.pkl', 'wb') as file:
             pickle.dump(algo, file)
         
        # exit()
     # Evaluation with a saved model
     else:
         algo = SVDpp()
-        with open('svdpp_model_1.pkl', 'rb') as file:
+        with open('svdpp_model.pkl', 'rb') as file:
             algo = pickle.load(file)
+
+    # params = {'n_factors': 50, 'n_epochs': 20, 'lr_all': 0.005, 'reg_all': 0.02}
+    # algo = SVDpp(**params)
+    # cross_validate(algo, train_data, measures=['RMSE', 'MAE'], cv=5, verbose=True)
 
     st.header("Recommendation Demo")
     st.write("Slide to the user_id you want to view!")
@@ -248,10 +252,12 @@ stratify=merged_df['userId'], random_state=42)
         
         st.subheader("Top 5 recommendations:")
         # Get top-5 recommendation
-        preds, top_recs = get_recommendation(selected_user_id, algo, unique_movie_ids, 5)
-        rec_movies =[df_movies[df_movies['movieId'] == pred.iid]['title'] for pred in preds]
+        top_recs, preds = get_recommendation(selected_user_id, algo, unique_movie_ids, 5)
+        rec_movies =[df_movies[df_movies['movieId'] == pred.iid]['title'] for pred in top_recs]
         st.write(rec_movies)
-    
+
+        st.write(len(preds))
+
         # Accuracy
         st.subheader("User Recommendation Accuracy:")
         st.write("Both, the training and test data-set has been utilized for calculating these metrics."+
@@ -271,9 +277,6 @@ stratify=merged_df['userId'], random_state=42)
         else:
             st.write("RMSE: ", rmse)
             st.write("MAE: ", mae)
-
-        if rmse == -1.0:
-          st.write("Not able to compute the error in rating ")
 
         st.write('Average Precision and Recall Visualization')
 
