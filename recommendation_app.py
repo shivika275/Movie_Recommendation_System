@@ -6,18 +6,28 @@ import streamlit as st
 from contextlib import redirect_stdout
 from io import StringIO
 import pickle
+import numpy as np
 from sklearn.model_selection import train_test_split
 from surprise import Dataset, Reader
 from surprise import SVDpp
 from surprise import accuracy
 from surprise.dataset import DatasetAutoFolds
 from surprise.model_selection import cross_validate, GridSearchCV
-# from helper import calc_metrics
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 def calc_metrics(user_id, preds, unique_movie_ids, df_users):
   
       predictions = preds #[svdpp.predict(user_id, movie_id) for movie_id in unique_movie_ids]
+      # Estimation for all predictions
+      ests = []
+      acts = []
+      for pred in predictions:
+          rating = df_users[(df_users['userId'] == pred.uid) & (df_users['movieId'] == pred.iid)]['rating'].values
+
+          if len(rating) > 0:
+              acts.append(rating[0])
+              ests.append(pred.est)
+
       filtered_ = [prediction for prediction in predictions if prediction.est >= 3.5]
       recommended_items = set(prediction.iid for prediction in predictions)
 
@@ -26,7 +36,6 @@ def calc_metrics(user_id, preds, unique_movie_ids, df_users):
       recommended_indata = []
       preds_rmse = []
       
-
       for preds in filtered_:
         
         rating = df_users[(df_users['userId'] == preds.uid) & (df_users['movieId'] == preds.iid)]['rating'].values
@@ -52,12 +61,19 @@ def calc_metrics(user_id, preds, unique_movie_ids, df_users):
       else:
         precision = len(relevant_recommendation) / len(recommended_indata)
       
-      if len(recommended_indata) == 0:
-        rmse, mae = -1.0, -1.0
-        print("No relevant recommendations have been made")
+      # if len(recommended_indata) == 0:
+      #   rmse, mae = -1.0, -1.0
+      #   print("No relevant recommendations have been made")
+      # else:
+      #   rmse = np.sqrt(mean_squared_error(est_ratings, actual_ratings))
+      #   mae = mean_absolute_error(est_ratings, actual_ratings)
+
+      if len(ests) > 0:
+        rmse = np.sqrt(mean_squared_error(ests, acts))
+        mae = mean_absolute_error(ests, acts)
       else:
-        rmse = np.sqrt(mean_squared_error(est_ratings, actual_ratings))
-        mae = mean_absolute_error(est_ratings, actual_ratings)
+        rmse = -1.0
+        mae = -1.0
       
       return precision, recall, rmse, mae
 
@@ -101,6 +117,19 @@ if __name__=='__main__':
     ax.set_xlabel('Rating')
     ax.set_ylabel('Count')
     ax.set_title('Distribution of Ratings')
+
+    # Display the plot in Streamlit
+    st.pyplot(fig)
+
+    st.subheader("User-specific rating distribution")
+    average_ratings = df_users.groupby('userId')['rating'].mean().sort_values()
+
+    # Plot the bar chart
+    fig, ax = plt.subplots()
+    ax.bar(average_ratings.index, average_ratings.values, color='skyblue')
+    ax.set_xlabel('User ID')
+    ax.set_ylabel('Average Rating')
+    ax.set_title('Average Ratings per User')
 
     # Display the plot in Streamlit
     st.pyplot(fig)
@@ -180,18 +209,20 @@ stratify=merged_df['userId'], random_state=42)
     # train with some params
     elif isTrain and not search:
 
-        params = {'n_factors': 50, 'n_epochs': 20, 'lr_all': 0.005, 'reg_all': 0.02}
+        # params = {'n_factors': 50, 'n_epochs': 20, 'lr_all': 0.005, 'reg_all': 0.02}
+        params = {'n_factors': 50, 'n_epochs': 20, 'lr_all': 0.01, 'reg_all': 0.1}
+        
         algo = SVDpp(**params)
 
         cross_validate(algo, train_data, measures=['RMSE', 'MAE'], cv=5, verbose=True)
-        with open('svdpp_model.pkl', 'wb') as file:
+        with open('svdpp_model_1.pkl', 'wb') as file:
             pickle.dump(algo, file)
-    
+        
+       # exit()
     # Evaluation with a saved model
     else:
-        
         algo = SVDpp()
-        with open('svdpp_model.pkl', 'rb') as file:
+        with open('svdpp_model_1.pkl', 'rb') as file:
             algo = pickle.load(file)
 
     st.header("Recommendation Demo")
@@ -235,8 +266,14 @@ stratify=merged_df['userId'], random_state=42)
         precision, recall, rmse, mae = calc_metrics(selected_user_id, preds, unique_movie_ids, df_users)
         st.write("Precision: ", precision)
         st.write("Recall: ", recall)
-        st.write("RMSE: ", rmse)
-        st.write("MAE: ", mae)
+        if rmse == -1.0:
+            st.write("UserID does not any ratings associated with them")
+        else:
+            st.write("RMSE: ", rmse)
+            st.write("MAE: ", mae)
+
+        if rmse == -1.0:
+          st.write("Not able to compute the error in rating ")
 
         st.write('Average Precision and Recall Visualization')
 
@@ -250,32 +287,3 @@ stratify=merged_df['userId'], random_state=42)
         # Display the plot in Streamlit
         st.pyplot(fig)
 
-
-    ## Notes
-
-    # Execute the code when a button is clicked
-    # if st.button("Run Code"):
-    #     with st.spinner("Running..."):
-    #         # Use exec to execute the code
-    #         exec(code)
-    # if st.button("Run Code"):
-    #   with st.spinner("Running..."):
-    #     # Capture the output
-    #     with StringIO() as buffer, redirect_stdout(buffer):
-    #         try:
-    #             exec(code)
-    #         except Exception as e:
-    #             st.error(f"Error: {e}")
-
-    #         # Display the captured output
-    #         st.text(buffer.getvalue())
-
-    
-
-    # Plot movies avg rating
-
-
-    # Interest in Genre
-    # Plot user-rating 
-    # Types of ratngs
-    
